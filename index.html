@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Phish Check</title>
+<meta name="description" content="Paste a suspicious URL or email and get an instant, rule-based phishing risk report — lookalike domains, urgency language, credential-harvesting cues, and more. Runs entirely in your browser." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ---- Design tokens ------------------------------------------------- */
+  :root {
+    color-scheme: light dark;
+    --font-ui: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+    /* light theme (default) */
+    --ink: #191d2b;
+    --ink-dim: #5c6178;
+    --paper: #f2f3f8;
+    --surface: #ffffff;
+    --surface-alt: #eaecf5;
+    --line: #dcdfea;
+    --accent: #2f4fd6;
+    --accent-ink: #ffffff;
+    --accent-soft: #e7ebfd;
+    --code-bg: #e9ebf5;
+
+    --clean: #157a52;
+    --clean-bg: #e2f5ec;
+    --low: #93650a;
+    --low-bg: #faf0d6;
+    --medium: #a3540a;
+    --medium-bg: #fbe8d3;
+    --high: #b8272c;
+    --high-bg: #fbe1e1;
+
+    --shadow: 0 1px 2px rgba(25, 29, 43, 0.04), 0 8px 24px rgba(25, 29, 43, 0.06);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #eef0fa;
+      --ink-dim: #9da3bd;
+      --paper: #14151f;
+      --surface: #1b1d2a;
+      --surface-alt: #232637;
+      --line: #323548;
+      --accent: #8fa1ff;
+      --accent-ink: #10132a;
+      --accent-soft: #262b4a;
+      --code-bg: #262a3c;
+
+      --clean: #52d99a;
+      --clean-bg: #123526;
+      --low: #e8c568;
+      --low-bg: #3a2f12;
+      --medium: #f0a15e;
+      --medium-bg: #3f2712;
+      --high: #ff8a8a;
+      --high-bg: #3f1616;
+
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ink: #eef0fa;
+    --ink-dim: #9da3bd;
+    --paper: #14151f;
+    --surface: #1b1d2a;
+    --surface-alt: #232637;
+    --line: #323548;
+    --accent: #8fa1ff;
+    --accent-ink: #10132a;
+    --accent-soft: #262b4a;
+    --code-bg: #262a3c;
+
+    --clean: #52d99a;
+    --clean-bg: #123526;
+    --low: #e8c568;
+    --low-bg: #3a2f12;
+    --medium: #f0a15e;
+    --medium-bg: #3f2712;
+    --high: #ff8a8a;
+    --high-bg: #3f1616;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  /* ---- Base ------------------------------------------------------------ */
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    padding-block: 32px 64px;
+  }
+  body { padding-inline: 16px; }
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  h1, h2 { text-wrap: balance; }
+
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+  .mark {
+    width: 42px; height: 42px; border-radius: 9px;
+    background: var(--accent); color: var(--accent-ink);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .mark svg { width: 22px; height: 22px; }
+  h1 { font-size: 1.35rem; margin: 0; letter-spacing: -0.01em; }
+  .tagline { color: var(--ink-dim); margin: 2px 0 0; font-size: 0.88rem; line-height: 1.5; max-width: 46ch; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--line); }
+  .tab {
+    padding: 8px 4px; margin-bottom: -1px;
+    border: none; border-bottom: 2px solid transparent;
+    background: transparent; color: var(--ink-dim);
+    font-family: inherit; font-size: 0.86rem; font-weight: 600;
+    cursor: pointer; margin-right: 18px;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab:focus-visible, button:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  textarea {
+    width: 100%; min-height: 92px; resize: vertical;
+    background: var(--surface-alt); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 11px 13px; font-size: 0.9rem; font-family: var(--font-mono); line-height: 1.55;
+    margin-top: 12px;
+  }
+  textarea::placeholder { color: var(--ink-dim); opacity: 0.8; }
+
+  .actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+  button { font-family: inherit; cursor: pointer; }
+  .btn {
+    font-size: 0.85rem; font-weight: 600; border-radius: 7px;
+    padding: 9px 15px; border: 1px solid transparent;
+  }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-ghost { background: transparent; border-color: var(--line); color: var(--ink-dim); }
+  .btn-ghost:hover { background: var(--surface-alt); }
+
+  .samples { margin-left: auto; font-size: 0.8rem; color: var(--ink-dim); }
+  .samples button {
+    background: none; border: none; padding: 0; color: var(--accent);
+    font-weight: 600; font-size: 0.8rem; text-decoration: underline; text-underline-offset: 2px;
+  }
+
+  #results { margin-top: 24px; }
+  #empty-state { margin-top: 24px; color: var(--ink-dim); font-size: 0.86rem; text-align: center; padding: 18px 0; }
+
+  .example-tag {
+    display: inline-block; font-family: var(--font-mono); font-size: 0.7rem; font-weight: 600;
+    letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-dim);
+    background: var(--surface-alt); border: 1px solid var(--line); border-radius: 5px;
+    padding: 3px 8px; margin-bottom: 10px;
+  }
+
+  .risk-banner {
+    border-radius: 10px; padding: 16px 18px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  }
+  .risk-label { font-size: 1.05rem; font-weight: 700; }
+  .risk-score-block { text-align: right; }
+  .risk-score {
+    font-family: var(--font-mono); font-weight: 600; font-size: 1.15rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .risk-score-caption { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.75; }
+
+  .meter { margin-top: 14px; }
+  .meter-track {
+    position: relative; height: 6px; border-radius: 999px; background: var(--surface-alt);
+    overflow: hidden;
+  }
+  .meter-fill { position: absolute; inset: 0; width: 0%; border-radius: 999px; transition: width 0.35s ease; }
+  @media (prefers-reduced-motion: reduce) { .meter-fill { transition: none; } }
+  .meter-labels {
+    display: flex; justify-content: space-between; margin-top: 5px;
+    font-size: 0.65rem; color: var(--ink-dim); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.03em;
+  }
+
+  .links-found { margin-top: 18px; }
+  .section-label {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--ink-dim); margin-bottom: 8px; font-weight: 700; font-family: var(--font-mono);
+  }
+  .link-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 0.84rem; }
+  .link-list code { background: var(--code-bg); padding: 2px 6px; border-radius: 5px; word-break: break-all; font-family: var(--font-mono); }
+  .pill {
+    font-family: var(--font-mono); font-size: 0.68rem; font-weight: 700;
+    padding: 2px 7px; border-radius: 4px; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.02em;
+  }
+  .pill-clean { background: var(--clean-bg); color: var(--clean); }
+  .pill-low { background: var(--low-bg); color: var(--low); }
+  .pill-medium { background: var(--medium-bg); color: var(--medium); }
+  .pill-high { background: var(--high-bg); color: var(--high); }
+
+  .flags-list { list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .flag {
+    display: flex; gap: 12px; padding: 12px 14px; border-radius: 7px;
+    background: var(--surface-alt); border: 1px solid var(--line); border-left: 3px solid var(--line);
+  }
+  .flag-low { border-left-color: var(--low); }
+  .flag-medium { border-left-color: var(--medium); }
+  .flag-high { border-left-color: var(--high); }
+  .flag-clean { border-left-color: var(--clean); }
+  .flag-sev {
+    flex-shrink: 0; font-family: var(--font-mono); font-size: 0.62rem; font-weight: 700;
+    letter-spacing: 0.03em; padding: 2px 6px; border-radius: 4px; height: fit-content;
+    text-transform: uppercase; margin-top: 1px;
+  }
+  .flag-low .flag-sev { background: var(--low-bg); color: var(--low); }
+  .flag-medium .flag-sev { background: var(--medium-bg); color: var(--medium); }
+  .flag-high .flag-sev { background: var(--high-bg); color: var(--high); }
+  .flag-clean .flag-sev { display: none; }
+  .flag-title { font-weight: 600; font-size: 0.89rem; }
+  .flag-detail { color: var(--ink-dim); font-size: 0.83rem; margin-top: 3px; line-height: 1.5; }
+
+  .disclaimer {
+    margin-top: 20px; font-size: 0.78rem; color: var(--ink-dim); line-height: 1.55;
+    border-top: 1px solid var(--line); padding-top: 14px;
+  }
+
+  footer { text-align: center; margin-top: 28px; color: var(--ink-dim); font-size: 0.78rem; line-height: 1.6; }
+
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 3 4 6.5V11c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V6.5L12 3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          <path d="M9 12.2 11.2 14.4 15.3 10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Phish Check</h1>
+        <p class="tagline">Paste a link or an email — get a rule-based phishing risk report, instantly, entirely in your browser.</p>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-tab="url" role="tab" aria-selected="true">Analyze a URL</button>
+        <button class="tab" data-tab="email" role="tab" aria-selected="false">Analyze an email</button>
+      </div>
+
+      <div id="panel-url">
+        <textarea id="url-input" rows="2" placeholder="http://secure-paypal-login-verify.tk/signin"></textarea>
+        <div class="actions">
+          <button class="btn btn-primary" id="scan-url-btn">Scan URL</button>
+          <button class="btn btn-ghost" id="clear-btn-url">Clear</button>
+          <span class="samples">Try: <button data-sample="url-bad">suspicious link</button> · <button data-sample="url-good">legitimate link</button></span>
+        </div>
+      </div>
+
+      <div id="panel-email" hidden>
+        <textarea id="email-input" rows="6" placeholder='From: "PayPal Support" <support@paypal-alert.tk>&#10;Dear Customer, your account will be suspended in 24 hours unless you verify now: http://paypal-alert.tk/verify'></textarea>
+        <div class="actions">
+          <button class="btn btn-primary" id="scan-email-btn">Scan email</button>
+          <button class="btn btn-ghost" id="clear-btn-email">Clear</button>
+          <span class="samples"><button data-sample="email-bad">Try a suspicious email</button></span>
+        </div>
+      </div>
+
+      <div id="empty-state" hidden>Results will appear here.</div>
+      <div id="results"></div>
+    </div>
+
+    <footer>
+      Built as a cybersecurity portfolio project · rule-based heuristics · 100% client-side, nothing is collected or transmitted.<br />
+      Not a substitute for official verification or enterprise threat intelligence.
+    </footer>
+  </div>
+
+  <script src="engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
+
